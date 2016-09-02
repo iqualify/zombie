@@ -138,11 +138,15 @@ module.exports = ({ browser, params, encoding, history, method, name, opener, pa
   window.XMLHttpRequest = ->
     return new XMLHttpRequest(window)
 
+  window._allWebsockets = [];
+
   # Web sockets
   window.WebSocket = (url, protocol)->
     url = HTML.resourceLoader.resolve(document, url)
     origin = "#{window.location.protocol}//#{window.location.host}"
-    return new WebSocket(url, origin: origin, protocol: protocol)
+    ws = new WebSocket(url, origin: origin, protocol: protocol)
+    window._allWebsockets.push(ws)
+    return ws
 
   window.Image = (width, height)->
     img = new HTML.HTMLImageElement(window.document)
@@ -258,6 +262,11 @@ module.exports = ({ browser, params, encoding, history, method, name, opener, pa
       return
 
     closed = true
+
+    for ws in window._allWebsockets
+      ws.removeAllListeners()
+      ws.close()
+
     # Close all frames first
     for frame in window.frames
       frame.close()
