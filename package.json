@@ -38,7 +38,7 @@
     "postpublish": "gulp tag"
   },
   "engines": {
-    "node": "0.10.x"
+    "node": "4.x"
   },
   "dependencies": {
     "bluebird": "^2.3.11",
