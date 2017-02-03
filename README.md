@@ -1,10 +1,17 @@
 # Zombie.js
 ### Insanely fast, headless full-stack testing using Node.js
 
-**NOTE:** This documentation is still work in progress.  Please help make it
-better by adding as much as you can and submitting a pull request.
+[![NPM](https://img.shields.io/npm/v/zombie.svg?style=flat-square&label=latest)](https://www.npmjs.com/package/zombie)
+[![Changelog](https://img.shields.io/badge/see-CHANGELOG-red.svg?style=flat-square)](https://github.com/assaf/zombie/blob/master/CHANGELOG.md)
+<img width="12" src="data:image/gif;base64,R0lGODlhAQABAPAAAP">
+![Node](https://img.shields.io/node/v/zombie.svg?style=flat-square&label=io.js)
+[![Travis.ci](https://img.shields.io/travis/assaf/zombie.svg?style=flat-square)](https://travis-ci.org/assaf/zombie)
+<img width="12" src="data:image/gif;base64,R0lGODlhAQABAPAAAP">
+[![JS.ORG](https://img.shields.io/badge/js.org-zombie-ffb400.svg?style=flat-square)](http://js.org)
 
-You can also consult [the older 1.4 documentation](http://zombie.labnotes.org).
+**Zombie 5.x** is tested to work with node.js 4 or later.
+If you need to use Node 0.12 or earlier, consider using Zombie 2.x.
+
 
 
 ## The Bite
@@ -18,55 +25,78 @@ a simulated environment.  No browser required.
 Let's try to sign up to a page and see what happens:
 
 ```js
-var Browser = require('zombie');
-var assert  = require('assert');
+const Browser = require('zombie');
 
-// We call our test example.com
+// We're going to make requests to http://example.com/signup
+// Which will be routed to our test server localhost:3000
 Browser.localhost('example.com', 3000);
 
-// Load the page from localhost
-var browser = Browser.create();
-browser.visit('/signup', function (error) {
-  assert.ifError(error);
+describe('User visits signup page', function() {
 
-  // Fill email, password and submit form
-  browser.
-    fill('email', 'zombie@underworld.dead').
-    fill('password', 'eat-the-living').
-    pressButton('Sign Me Up!', function(error) {
-      assert.ifError(error);
+  const browser = new Browser();
 
-      // Form submitted, new page loaded.
-      browser.assert.success();
-      browser.assert.text('title', 'Welcome To Brains Depot');
+  before(function(done) {
+    browser.visit('/signup', done);
+  });
 
+  describe('submits form', function() {
+
+    before(function(done) {
+      browser
+        .fill('email',    'zombie@underworld.dead')
+        .fill('password', 'eat-the-living')
+        .pressButton('Sign Me Up!', done);
     });
 
+    it('should be successful', function() {
+      browser.assert.success();
+    });
+
+    it('should see welcome page', function() {
+      browser.assert.text('title', 'Welcome To Brains Depot');
+    });
+  });
 });
 ```
 
-If you prefer using promises:
+This example uses the [Mocha](https://github.com/mochajs/mocha) testing
+framework, but Zombie will work with other testing frameworks.  Since Mocha
+supports promises, we can also write the test like this:
 
 ```js
-var Browser = require('zombie');
+const Browser = require('zombie');
 
-// We call our test example.com
+// We're going to make requests to http://example.com/signup
+// Which will be routed to our test server localhost:3000
 Browser.localhost('example.com', 3000);
 
-// Load the page from localhost
-var browser = Browser.create();
-browser.visit('/signup')
-  .then(function() {
-    // Fill email, password and submit form
-    browser.fill('email', 'zombie@underworld.dead');
-    browser.fill('password', 'eat-the-living');
-    return browser.pressButton('Sign Me Up!');
-  })
-  .done(function() {
-    // Form submitted, new page loaded.
-    browser.assert.success();
-    browser.assert.text('title', 'Welcome To Brains Depot');
+describe('User visits signup page', function() {
+
+  const browser = new Browser();
+
+  before(function() {
+    return browser.visit('/signup');
   });
+
+  describe('submits form', function() {
+
+    before(function() {
+      browser
+        .fill('email',    'zombie@underworld.dead')
+        .fill('password', 'eat-the-living');
+      return browser.pressButton('Sign Me Up!');
+    });
+
+    it('should be successful', function() {
+      browser.assert.success();
+    });
+
+    it('should see welcome page', function() {
+      browser.assert.text('title', 'Welcome To Brains Depot');
+    });
+  });
+
+});
 ```
 
 Well, that was easy.
@@ -78,48 +108,24 @@ Well, that was easy.
 
 * [Installing](#installing)
 * [Browser](#browser)
+* [Assertions](#assertions)
 * [Cookies](#cookies)
 * [Tabs](#tabs)
-* [Assertions](#assertions)
+* [Debugging](#debugging)
 * [Events](#events)
 * [Resources](#resources)
-* [Debugging](#debugging)
-* [FAQ](#faq)
+* [Pipeline](#pipeline)
 
 
 
 
 ## Installing
 
-To install Zombie.js you will need [Node.js](http://nodejs.org/) 0.8 or later,
-[NPM](https://npmjs.org/), a [C++ toolchain and
-Python](https://github.com/TooTallNate/node-gyp).
+To install Zombie.js you will need [io.js](https://iojs.org/):
 
-One-click installers for Windows, OS X, Linux and SunOS are available directly
-from the [Node.js site](http://nodejs.org/download/).
-
-On OS X you can download the full XCode from the Apple Store, or install the
-[OSX GCC toolchain](https://github.com/kennethreitz/osx-gcc-installer) directly
-(smaller download).
-
-You can also install Node and NPM using the wonderful
-[Homebrew](http://mxcl.github.com/homebrew/) (if you're serious about developing
-on the Mac, you should be using Homebrew):
-
-```sh
-$ brew install node
-$ node --version
-v0.10.25
-$ npm --version
-1.3.24
+```bash
 $ npm install zombie --save-dev
 ```
-
-On Windows you will need to install a recent version of Python and Visual
-Studio. See [node-gyp for specific installation
-instructions](https://github.com/TooTallNate/node-gyp) and
-[Chocolatey](http://chocolatey.org/) for easy package management.
-
 
 
 
@@ -132,21 +138,22 @@ Methods for making assertions against the browser, such as
 
 See [Assertions](#assertions) for detailed discussion.
 
-#### browser.console
-
-Provides access to the browser console (same as `window.console`).
-
 #### browser.referer
 
 You can use this to set the HTTP Referer header.
 
 #### browser.resources
 
-Access to history of retrieved resources.  Also provides methods for retrieving
-resources and managing the resource pipeline.  When things are not going your
-way, try calling `browser.resources.dump()`.
+Access to history of retrieved resources.  See [Resources](#resources) for
+detailed discussion.
 
-See [Resources](#resources) for detailed discussion.
+#### browser.pipeline
+
+Access to the pipeline for making requests and processing responses.  Use this
+to add new request/response handlers the pipeline for a single browser instance,
+or use `Pipeline.addHandler` to modify all instances.  See
+[Pipeline](#pipeline).
+
 
 #### browser.tabs
 
@@ -155,68 +162,63 @@ window at a time.
 
 See [Tabs](#tabs) for detailed discussion.
 
-#### Browser.localhost(hostname, port)
-
-Even though your test server is running on localhost and unprivileged port, this
-method makes it possible to access it as a different domain name and through
-port 80.
-
-It also sets the default site URL, so your tests don't have to specify the
-hostname every time.
-
-Let's say your test server runs on port 3000, and you want to write tests that
-visit `example.com`:
-
-```
-Browser.localhost('example.com', 3000);
-```
-
-You can now visit `http://example.com/path` and it will talk to your local
-server on port 3000.  In fact, `example.com` becomes the default domain, so your
-tests can be as simple as:
-
-```
-// Global setting, applies to all browser instances
-Browser.localhost('*.example.com', 3000);
-
-// Browser instance for this test
-var browser = Browser.create();
-browser.visit('/path', function() {
-  // It picks example.com as the default host
-  browser.assert.url('http://example.com/path');
-});
-```
-
-Notice the asterisk in the above example, that tells Zombie to route all
-sub-domains, so you can visit `foo.example.com` and `bar.example.com` in your
-test case.
-
-If you need to map multiple domains and/or ports, see [DNS Masking](#dnsmasking)
-and [Port Mapping](#portmapping).
-
-If you need more flexibility, consider that `Browser.localhost` is just a
-shortcut for making these three changes:
-
-- `Browser.dns.localhost(hostname)` will make any DNS lookup of hostname resolve
-  to 127.0.0.1 (see [DNS Masking](#dnsmasking))
-- `Browser.ports.map(hostname, port)` will redirect any HTTP request to hostname
-  from port 80 to the designated port (see [Port Mapping](#portmapping))
-- `Browser.default.size = hostname` will add the hostname to any relative URL
-  (e.g. when using `browser.visit`)
-
-
 #### browser.proxy
 
-The `proxy` option takes a URL so you can tell Zombie what protocol, host and port to use. Also supports Basic authentication, e.g.:
+The `proxy` option takes a URL so you can tell Zombie what protocol, host and
+port to use. Also supports Basic authentication, e.g.:
 
-    browser.proxy = "http://me:secret@myproxy:8080"
+```js
+browser.proxy = 'http://me:secret@myproxy:8080'
+```
 
-
-#### browser.eventLoop
 #### browser.errors
 
+Collection of errors accumulated by the browser while loading page and executing
+scripts.
 
-### Extending The Browser
+#### Browser.localhost(host, port)
+
+Allows you to make requests against a named domain and HTTP/S port, and will
+route it to the test server running on localhost and unprivileged port.
+
+For example, if you want to call your application "example.com", and redirect
+traffic from port 80 to the test server that's listening on port 3000, you can
+do this:
+
+```js
+Browser.localhost('example.com', 3000)
+browser.visit('/path', function() {
+  console.log(browser.location.href);
+});
+=> 'http://example.com/path'
+```
+
+The first time you call `Browser.localhost`, if you didn't specify
+`Browser.site`, it will set it to the hostname (in the above example,
+"example.com").  Whenever you call `browser.visit` with a relative URL, it
+appends it to `Browser.site`, so you don't need to repeat the full URL in every
+test case.
+
+You can use wildcards to map domains and all hosts within these domains, and you
+can specify the source port to map protocols other than HTTP.  For example:
+
+```js
+// HTTP requests for example.test www.example.test will be answered by localhost
+// server running on port 3000
+Browser.localhost('*.example.test', 3000);
+// HTTPS requests will be answered by localhost server running on port 3001
+Browser.localhost('*.example.test:443', 3001);
+```
+
+The underlying implementation hacks `net.Socket.connect`, so it will route any
+TCP connection made by the Node application, whether Zombie or any other
+library.  It does not affect other processes running on your machine.
+
+### Browser.extend
+
+You can use this to customize new browser instances for your specific needs.
+The extension function is called for every new browser instance, and can change
+properties, bind methods, register event listeners, etc.
 
 ```js
 Browser.extend(function(browser) {
@@ -228,6 +230,286 @@ Browser.extend(function(browser) {
   });
 });
 ```
+
+
+
+
+## Assertions
+
+To make life easier, Zombie introduces a set of convenience assertions that you
+can access directly from the browser object.  For example, to check that a page
+loaded successfully:
+
+```js
+browser.assert.success();
+browser.assert.text('title', 'My Awesome Site');
+browser.assert.element('#main');
+```
+
+These assertions are available from the `browser` object since they operate on a
+particular browser instance -- generally dependent on the currently open window,
+or document loaded in that window.
+
+Many assertions require an element/elements as the first argument, for example,
+to compare the text content (`assert.text`), or attribute value
+(`assert.attribute`).  You can pass one of the following values:
+
+- An HTML element or an array of HTML elements
+- A CSS selector string (e.g. "h2", ".book", "#first-name")
+
+Many assertions take an expected value and compare it against the actual value.
+For example, `assert.text` compares the expected value against the text contents
+of one or more strings.  The expected value can be one of:
+
+- A JavaScript primitive value (string, number)
+- `undefined` or `null` are used to assert the lack of value
+- A regular expression
+- A function that is called with the actual value and returns true if the
+  assertion is true
+- Any other object will be matched using `assert.deepEqual`
+
+Note that in some cases the DOM specification indicates that lack of value is an
+empty string, not `null`/`undefined`.
+
+All assertions take an optional last argument that is the message to show if the
+assertion fails.  Better yet, use a testing framework like
+[Mocha](https://github.com/mochajs/mocha) that has good diff support and
+don't worry about these messages.
+
+
+### Available Assertions
+
+The following assertions are available:
+
+#### assert.attribute(selection, name, expected, message)
+
+Asserts the named attribute of the selected element(s) has the expected value.
+
+Fails if no element found.
+
+```js
+browser.assert.attribute('form', 'method', 'post');
+browser.assert.attribute('form', 'action', '/customer/new');
+// Disabled with no attribute value, i.e. <button disabled>
+browser.assert.attribute('button', 'disabled', '');
+// No disabled attribute i.e. <button>
+browser.assert.attribute('button', 'disabled', null);
+```
+
+#### assert.className(selection, className, message)
+
+Asserts that selected element(s) has that and only that class name.  May also be
+space-separated list of class names.
+
+Fails if no element found.
+
+```js
+browser.assert.className('form input[name=email]', 'has-error');
+```
+
+#### assert.cookie(identifier, expected, message)
+
+Asserts that a cookie exists and  has the expected value, or if `expected` is
+`null`, that no such cookie exists.
+
+The identifier is either the name of a cookie, or an object with the property
+`name` and the optional properties `domain` and `path`.
+
+```js
+browser.assert.cookie('flash', 'Missing email address');
+```
+
+#### assert.element(selection, message)
+
+Asserts that one element matching selection exists.
+
+Fails if no element or more than one matching element are found.
+
+```js
+browser.assert.element('form');
+browser.assert.element('form input[name=email]');
+browser.assert.element('form input[name=email].has-error');
+```
+
+#### assert.elements(selection, count, message)
+
+Asserts how many elements exist in the selection.
+
+The argument `count` can be a number, or an object with the following
+properties:
+
+- `atLeast` - Expecting to find at least that many elements
+- `atMost`  - Expecting to find at most that many elements
+- `exactly` - Expecting to find exactly that many elements
+
+```js
+browser.assert.elements('form', 1);
+browser.assert.elements('form input', 3);
+browser.assert.elements('form input.has-error', { atLeast: 1 });
+browser.assert.elements('form input:not(.has-error)', { atMost: 2 });
+```
+
+#### assert.evaluate(expression, expected, message)
+
+Evaluates the JavaScript expression in the context of the currently open window.
+
+With one argument, asserts that the value is equal to `true`.
+
+With two/three arguments, asserts that the returned value matches the expected
+value.
+
+```js
+browser.assert.evaluate('$("form").data("valid")');
+browser.assert.evaluate('$("form").data("errors").length', 3);
+```
+
+#### assert.global(name, expected, message)
+
+Asserts that the global (window) property has the expected value.
+
+#### assert.hasClass(selection, className, message)
+
+Asserts that selected element(s) have the expected class name.  Elements may
+have other class names (unlike `assert.className`).
+
+Fails if no element found.
+
+```js
+browser.assert.hasClass('form input[name=email]', 'has-error');
+```
+
+#### assert.hasFocus(selection, message)
+
+Asserts that selected element has the focus.
+
+If the first argument is `null`, asserts that no element has the focus.
+
+Otherwise, fails if element not found, or if more than one element found.
+
+```js
+browser.assert.hasFocus('form input:nth-child(1)');
+```
+
+#### assert.hasNoClass(selection, className, message)
+
+Asserts that selected element(s) does not have the expected class name.  Elements may
+have other class names (unlike `assert.className`).
+
+Fails if no element found.
+
+```js
+browser.assert.hasNoClass('form input', 'has-error');
+```
+
+#### assert.input(selection, expected, message)
+
+Asserts that selected input field(s) (`input`, `textarea`, `select` etc) have
+the expected value.
+
+Fails if no element found.
+
+```js
+browser.assert.input('form input[name=text]', 'Head Eater');
+```
+
+#### assert.link(selection, text, url, message)
+
+Asserts that at least one link exists with the given selector, text and URL.
+The selector can be `a`, but a more specific selector is recommended.
+
+URL can be relative to the current document, or a regular expression.
+
+Fails if no element is selected that also has the specified text content and
+URL.
+
+```js
+browser.assert.link('footer a', 'Privacy Policy', '/privacy');
+```
+
+#### assert.redirected(message)
+
+Asserts the browser was redirected when retrieving the current page.
+
+#### assert.success(message)
+
+Asserts the current page loaded successfully (status code 2xx or 3xx).
+
+#### assert.status(code, message)
+
+Asserts the current page loaded with the expected status code.
+
+```js
+browser.assert.status(404);
+```
+
+#### assert.style(selection, style, expected, message)
+
+Asserts that selected element(s) have the expected value for the named style
+property.  For example:
+
+Fails if no element found, or element style does not match expected value.
+
+```js
+browser.assert.style('#show-hide.hidden', 'display', 'none');
+browser.assert.style('#show-hide:not(.hidden)', 'display', '');
+```
+
+#### assert.text(selection, expected, message)
+
+Asserts that selected element(s) have the expected text content.  For example:
+
+Fails if no element found that has that text content.
+
+```js
+browser.assert.text('title', 'My Awesome Page');
+```
+
+#### assert.url(url, message)
+
+Asserts the current page has the expected URL.
+
+The expected URL can be one of:
+
+- The full URL as a string
+- A regular expression
+- A function, called with the URL and returns true if the assertion is true
+- An [object](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost), in which case individual properties are matched against the URL
+
+For example:
+
+```js
+browser.assert.url('http://localhost/foo/bar');
+browser.assert.url(new RegExp('^http://localhost/foo/\\w+$'));
+browser.assert.url({ pathname: '/foo/bar' });
+browser.assert.url({ query: { name: 'joedoe' } });
+```
+
+
+### Roll Your Own Assertions
+
+Not seeing an assertion you want?  You can add your own assertions to the
+prototype of `Browser.Assert`.
+
+For example:
+
+```js
+// Asserts the browser has the expected number of open tabs.
+Browser.Assert.prototype.openTabs = function(expected, message) {
+  assert.equal(this.browser.tabs.length, expected, message);
+};
+```
+
+Or application specific:
+
+```js
+// Asserts which links is highlighted in the navigation bar
+Browser.Assert.navigationOn = function(linkText) {
+  this.assert.element('.navigation-bar');
+  this.assert.text('.navigation-bar a.highlighted', linkText);
+};
+```
+
+
 
 
 ## Cookies
@@ -244,7 +526,7 @@ Consider this code:
 ```js
 browser.setCookie(name: 'session', domain: 'example.com', value: 'delicious');
 browser.visit('http://example.com', function() {
-  var value = browser.getCookie('session');
+  const value = browser.getCookie('session');
   console.log('Cookie', value);
 });
 ```
@@ -288,12 +570,11 @@ value of the cookie.  If true, it returns an object with all the cookie
 properties: `name`, `value`, `domain`, `path`, `expires`, `httpOnly` and
 `secure`.
 
-
 #### browser.cookies
 
 Returns an object holding all cookies used by this browser.
 
-#### browser.cookies.dump(stream?)
+#### browser.cookies.dump(output?)
 
 Dumps all cookies to standard output, or the output stream.
 
@@ -372,14 +653,6 @@ first tab would be the window with the document '/foo'.
 
 The following operations are used for managing tabs:
 
-#### browser.close(window)
-
-Closes the tab with the given window.
-
-#### browser.close()
-
-Closes the currently open tab.
-
 #### browser.tabs
 
 Returns an array of all open tabs.
@@ -405,7 +678,7 @@ Can also be used to change the currently active tab.  You can set it to a
 window (e.g. as currently returned from `browser.current`), a window name or the
 tab index number.
 
-#### browser.tabs.dump(output)
+#### browser.tabs.dump(output?)
 
 Dump a list of all open tabs to standard output, or the output stream.
 
@@ -417,7 +690,7 @@ Returns the index of the currently active tab.
 
 Returns the number of currently opened tabs.
 
-#### browser.open(url: 'http://example.com')
+#### browser.open (url)
 
 Opens and returns a new tab.  Supported options are:
 - `name` - Window name.
@@ -430,289 +703,33 @@ Returns the currently active window, same as `browser.tabs.current.`
 
 
 
-## Assertions
+## Debugging
 
-To make life easier, Zombie introduces a set of convenience assertions that you
-can access directly from the browser object.  For example, to check that a page
-loaded successfuly:
+To see what your code is doing, you can use `console.log` and friends from both
+client-side scripts and your test code.
 
-```js
-browser.assert.success();
-browser.assert.text('title', 'My Awesome Site');
-browser.assert.element('#main');
+To see everything Zombie does (opening windows, loading URLs, firing events,
+etc), set the environment variable `DEBUG=zombie`.  Zombie uses the
+[debug](https://github.com/visionmedia/debug) module.  For example:
+
+```bash
+$ DEBUG=zombie mocha
 ```
 
-These assertions are available from the `browser` object since they operate on a
-particular browser instance -- generally dependent on the currently open window,
-or document loaded in that window.
+You can also turn debugging on from your code (e.g. a specific test you're
+trying to troubleshoot) by calling `browser.debug()`.
 
-Many assertions require an element/elements as the first argument, for example,
-to compare the text content (`assert.text`), or attribute value
-(`assert.attribute`).  You can pass one of the following values:
-
-- An HTML element or an array of HTML elements
-- A CSS selector string (e.g. "h2", ".book", "#first-name")
-
-Many assertions take an expected value and compare it against the actual value.
-For example, `assert.text` compares the expected value against the text contents
-of one or more strings.  The expected value can be one of:
-
-- A JavaScript primitive value (string, number)
-- `undefined` or `null` are used to assert the lack of value
-- A regular expression
-- A function that is called with the actual value and returns true if the
-  assertion is true
-- Any other object will be matched using `assert.deepEqual`
-
-Note that in some cases the DOM specification indicates that lack of value is an
-empty string, not `null`/`undefined`.
-
-All assertions take an optional last argument that is the message to show if the
-assertion fails.  Better yet, use a testing framework like
-[Mocha](https://github.com/mochajs/mocha) that has good diff support and
-don't worry about these messages.
-
-
-### Available Assertions
-
-The following assertions are available:
-
-#### assert.attribute(selection, name, expected, message)
-
-Asserts the named attribute of the selected element(s) has the expected value.
-
-Fails if no element found.
+Some objects, like the browser, history, resources, tabs and windows also
+include `dump` method that will dump the current state to the console, or an
+output stream of your choice.  For example:
 
 ```js
-browser.assert.attribute('form', 'method', 'post');
-browser.assert.attribute('form', 'action', '/customer/new');
-// Disabled with no attribute value, i.e. <button disabled>
-browser.assert.attribute('button', 'disabled', '');
-// No disabled attribute i.e. <button>
-browser.assert.attribute('button', 'disabled', null);
+browser.dump();
+browser.dump(process.stderr);
 ```
 
-#### assert.className(selection, className, message)
-
-Asserts that selected element(s) has that and only that class name.  May also be
-space-separated list of class names.
-
-Fails if no element found.
-
-```js
-browser.assert.className('form input[name=email]', 'has-error');
-```
-
-#### assert.cookie(identifier, expected, message)
-
-Asserts that a cookie exists and  has the expected value, or if `expected` is
-`null`, that no such cookie exists.
-
-The identifier is either the name of a cookie, or an object with the property
-`name` and the optional properties `domain` and `path`.
-
-```js
-browser.assert.cookie('flash', 'Missing email addres');
-```
-
-#### assert.element(selection, message)
-
-Asserts that one element matching selection exists.
-
-Fails if no element or more than one matching element are found.
-
-```js
-browser.assert.element('form');
-browser.assert.element('form input[name=email]');
-browser.assert.element('form input[name=email].has-error');
-```
-
-#### assert.elements(selection, count, message)
-
-Asserts how many elements exist in the selection.
-
-The argument `count` can be a number, or an object with the following
-properties:
-
-- `atLeast` - Expecting to find at least that many elements
-- `atMost`  - Expecting to find at most that many elements
-- `exactly` - Expecting to find exactly that many elements
-
-```js
-browser.assert.elements('form', 1);
-browser.assert.elements('form input', 3);
-browser.assert.elements('form input.has-error', { atLeast: 1 });
-browser.assert.elements('form input:not(.has-error)', { atMost: 2 });
-```
-
-#### assert.evaluate(expression, expected, message)
-
-Evaluates the JavaScript expression in the context of the currently open window.
-
-With one argument, asserts that the value is equal to `true`.
-
-With two/three arguments, asserts that the returned value matches the expected
-value.
-
-```js
-browser.assert.evaluate('$('form').data('valid')');
-browser.assert.evaluate('$('form').data('errors').length', 3);
-```
-
-#### assert.global(name, expected, message)
-
-Asserts that the global (window) property has the expected value.
-
-#### assert.hasClass(selection, className, message)
-
-Asserts that selected element(s) have the expected class name.  Elements may
-have other class names (unlike `assert.className`).
-
-Fails if no element found.
-
-```js
-browser.assert.hasClass('form input[name=email]', 'has-error');
-```
-
-#### assert.hasFocus(selection, message)
-
-Asserts that selected element has the focus.
-
-If the first argument is `null`, asserts that no element has the focus.
-
-Otherwise, fails if element not found, or if more than one element found.
-
-```js
-browser.assert.hasFocus('form input:nth-child(1)');
-```
-
-#### assert.hasNoClass(selection, className, message)
-
-Asserts that selected element(s) does not have the expected class name.  Elements may
-have other class names (unlike `assert.className`).
-
-Fails if no element found.
-
-```js
-browser.assert.hasNoClass('form input', 'has-error');
-```
-
-#### assert.input(selection, expected, message)
-
-Asserts that selected input field(s) (`input`, `textarea`, `select` etc) have
-the expected value.
-
-Fails if no element found.
-
-```js
-browser.assert.input('form input[name=text]', 'Head Eater');
-```
-
-#### assert.link(selection, text, url, message)
-
-Asserts that at least one link exists with the given selector, text and URL.
-The selector can be `a`, but a more specific selector is recommended.
-
-URL can be relative to the current document, or a regular expression.
-
-Fails if no element is selected that also has the specified text content and
-URL.
-
-```js
-browser.assert.link('footer a', 'Privacy Policy', '/privacy');
-```
-
-#### assert.prompted(messageShown, message)
-
-Asserts the browser prompted with a given message.
-
-```js
-browser.assert.prompted('Are you sure?');
-```
-
-#### assert.redirected(message)
-
-Asserts the browser was redirected when retrieving the current page.
-
-#### assert.success(message)
-
-Asserts the current page loaded successfully (status code 2xx or 3xx).
-
-#### assert.status(code, message)
-
-Asserts the current page loaded with the expected status code.
-
-```js
-browser.assert.status(404);
-```
-
-#### assert.style(selection, style, expected, message)
-
-Asserts that selected element(s) have the expected value for the named style
-property.  For example:
-
-Fails if no element found, or element style does not match expected value.
-
-```js
-browser.assert.style('#show-hide.hidden', 'display', 'none');
-browser.assert.style('#show-hide:not(.hidden)', 'display', '');
-```
-
-#### assert.text(selection, expected, message)
-
-Asserts that selected element(s) have the expected text content.  For example:
-
-Fails if no element found that has that text content.
-
-```js
-browser.assert.text('title', 'My Awesome Page');
-```
-
-#### assert.url(url, message)
-
-Asserts the current page has the expected URL.
-
-The expected URL can be one of:
-
-- The full URL as a string
-- A regular expression
-- A function, called with the URL and returns true if the assertion is true
-- An [object](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost), in which case individual properties are matched against the URL
-
-For example:
-
-```js
-browser.assert.url('http://localhost/foo/bar');
-browser.assert.url(new RegExp('^http://localhost/foo/\\w+$'));
-browser.assert.url({ pathame: '/foo/bar' });
-browser.assert.url({ query: { name: 'joedoe' } });
-```
-
-
-### Roll Your Own Assertions
-
-Not seeing an assertion you want?  You can add your own assertions to the
-prototype of `Browser.Assert`.
-
-For example:
-
-```js
-// Asserts the browser has the expected number of open tabs.
-Browser.Assert.prototype.openTabs = function(expected, message) {
-  assert.equal(this.browser.tabs.length, expected, message);
-};
-```
-
-Or application specific:
-
-
-```js
-// Asserts which links is highlighted in the navigation bar
-Browser.Assert.navigationOn = function(linkText) {
-  this.assert.element('.navigation-bar');
-  this.assert.text('.navigation-bar a.highlighted', linkText);
-};
-```
+If you want to disable console output from scripts, set `browser.silent = true`
+or once for all browser instances with `Browser.silent = true`.
 
 
 
@@ -754,6 +771,10 @@ Emitted when this window is closed.
 
 Emitted when the event loop goes empty.
 
+#### error (error)
+
+Error when loading a resource, or evaluating JavaScript.
+
 #### evaluated (code, result, filename)
 
 Emitted after JavaScript code is evaluated.
@@ -768,6 +789,10 @@ Emitted whenever a DOM event is fired on the target element, document or window.
 #### focus (element)
 
 Emitted whenever an element receives the focus.
+
+#### idle ()
+
+Event loop is idle.
 
 #### inactive (window)
 
@@ -803,15 +828,9 @@ This event is emitted when the document is still empty, before parsing any HTML.
 
 Emitted when a new window is opened.
 
-#### redirect (request, response, redirectRequest)
+#### redirect (request, response)
 
 Emitted when following a redirect.
-
-The first argument is the request, the second argument is the response that
-caused the redirect, and the third argument is the new request to follow the
-redirect.  See [Resources](#resources) for more details.
-
-The URL of the new resource to retrieve is given by `response.url`.
 
 #### request (request)
 
@@ -827,6 +846,18 @@ Emitted after receiving the response (excluding redirects).
 The first argument is the request object, the second argument is the response
 object.  See [Resources](#resources) for more details.
 
+#### serverEvent ()
+
+Browser received server initiated event (e.g. `EventSource` message).
+
+#### setInterval (function, interval)
+
+Event loop fired a `setInterval` event.
+
+#### setTimeout (function, delay)
+
+Event loop fired a `setTimeout` event.
+
 #### submit (url, target)
 
 Emitted whenever a form is submitted.
@@ -840,6 +871,27 @@ Emitted whenever a timeout (`setTimeout`) is fired.
 
 The first argument is the function or code to evaluate, the second argument is
 the delay in milliseconds.
+
+#### xhr (event, url)
+
+Called for each XHR event (`progress`, `abort`, `readystatechange`, `loadend`,
+etc).
+
+
+
+
+## Authentication
+
+Zombie supports HTTP basic access authentication. To provide the login credentials:
+
+```js
+browser.on('authenticate', function(authentication) {
+  authentication.username = 'myusername';
+  authentication.password = 'mypassword';
+});
+
+browser.visit('/mypage');
+```
 
 
 
@@ -855,413 +907,111 @@ any of the following:
 
 - Inspect the history of retrieved resources, useful for troubleshooting issues
   related to resource loading
-- Simulate a failed server
-- Change the order in which resources are retrieved, or otherwise introduce
-  delays to simulate a real world network
-- Mock responses from servers you don't have access to, or don't want to access
-  from test environment
 - Request resources directly, but have Zombie handle cookies, authentication,
   etc
 - Implement new mechanism for retrieving resources, for example, add new
-  protocols or support new headers
+  protocols or support new headers (see [Pipeline](#pipeline))
 
 
 ### The Resources List
 
-Each browser provides access to its resources list through `browser.resources`.
+Each browser provides access to the list of resources loaded by the currently
+open window via `browser.resources`.  You can iterate over this list just like
+any JavaScript array.
 
-The resources list is an array of all resouces requested by the browser.  You
-can iterate and manipulate it just like any other JavaScript array.
-
-Each resource provides four properties:
+Each resource provides three properties:
 
 - `request`   - The request object
 - `response`  - The resource object (if received)
-- `error`     - The error received instead of response
-- `target`    - The target element or document (when loading HTML page, script,
-  etc)
+- `error`     - The error generated (no response)
 
-The request object consists of:
+The request object is based on the [Fetch API Request
+object](https://fetch.spec.whatwg.org/#request-class).
 
-- `method`      - HTTP method, e.g. "GET"
-- `url`         - The requested URL
-- `headers`     - All request headers
-- `body`        - The request body can be `Buffer` or string; only applies to
-  POST and PUT methods
-- `multipart`  - Used instead of a body to support file upload
-- `time`        - Timestamp when request was made
-- `timeout`     - Request timeout (0 for no timeout)
+The response object is based on the [Fetch API Response
+object](https://fetch.spec.whatwg.org/#response-class).  Note that the fetch API
+has the property `status`, whereas Node HTTP module uses `statusCode`.
 
-The response object consists of:
+#### browser.fetch(input, init)
 
-- `url`         - The actual URL of the resource; different from request URL if
-  there were any redirects
-- `statusCode`  - HTTP status code, eg 200
-- `statusText`  - HTTP static code as text, eg "OK"
-- `headers`     - All response headers
-- `body`        - The response body, may be `Buffer` or string, depending on the
-  content type encoding
-- `redirects`   - Number of redirects followed (0 if no redirects)
-- `time`        - Timestamp when response was completed
+You can use the browser directly to make requests against external resources.
+These requests will share the same cookies, authentication and other browser
+settings (also pipeline).
 
-Request for loading pages and scripts include the target DOM element or
-document. This is used internally, and may also give you more insight as to why
-a request is being made.
+The `fetch` method is based on the [Fetch
+API](https://fetch.spec.whatwg.org/#fetch-method).
 
+For example:
 
-### Mocking, Failing and Delaying Responses
-
-To help in testing, Zombie includes some convenience methods for mocking,
-failing and delaying responses.
-
-For example, to mock a response:
-
-```js
-browser.resources.mock('http://3rd.party.api/v1/request', {
-  statusCode: 200,
-  headers:    { 'ContentType': 'application/json' },
-  body:       JSON.stringify({ 'count': 5 })
-})
+```
+browser.fetch(url)
+  .then(function(response) {
+    console.log('Status code:', response.status);
+    if (response.status === 200)
+      return response.text();
+  })
+  .then(function(text) {
+    console.log('Document:', text);
+  })
+  .catch(function(error) {
+    console.log('Network error');
+  });
 ```
 
-In the real world, servers and networks often fail.  You can test for these
-conditions by asking Zombie to simulate a failure.  For example:
+To access the response document body as a Node buffer, use the following:
 
 ```js
-browser.resources.fail('/form/post');
+response.arrayBuffer()
+  .then(Buffer) // arrayBuffer -> Buffer
+  .then(function(buffer) {
+    assert( Buffer.isBuffer(buffer) );
+  });
 ```
 
-Resource URLs can be absolute or relative strings or regular expressions.
-Relative URLs will match any request with the same path, so only use relative
-URLs that are specific to a given request.  If the resource URL is a regular
-expression, it will be tested against the requested URL and the handler used
-if there is a match.
+#### resources.dump(output?)
 
-Another issue you'll encounter in real-life applications are network latencies.
-When running tests, Zombie will request resources in the order in which they
-appear on the page, and likely receive them from the local server in that same
-order.
-
-Occassionally you'll need to force the server to return resources in a different
-order, for example, to check what happens when script A loads after script B.
-You can introduce a delay into any response as simple as:
-
-```js
-browser.resources.delay('http://3d.party.api/v1/request', 50);
-```
+Dumps the resources list to the output stream (defaults to standard output
+stream).
 
 
-### The Pipeline
+
+
+## Pipeline
 
 Zombie uses a pipeline to operate on resources.  You can extend that pipeline
 with your own set of handlers, for example, to support additional protocols,
-content types, special handlers, better resource mocking, etc.
+content types, special handlers, etc.
 
 The pipeline consists of a set of handlers.  There are two types of handlers:
 
 Functions with two arguments deal with requests.  They are called with the
-request object and a callback, and must call that callback with one of:
-
-- No arguments to pass control to the next handler
-- An error to stop processing and return that error
-- `null` and the response objec to return that response
+browser and request object.  They may modify the request object, and they may
+either return null (pass control to the next handler) or return the Response
+object, or return a promise that resolves to either outcome.
 
 Functions with three arguments deal with responses.  They are called with the
-request object, response object and a callback, and must call that callback with
-one of:
-
-- No arguments to pass control to the next handler
-- An error to stop processing and return that error
+browser, request and response objects.  They may modify the response object, and
+must return a Response object, either the same as the argument or a new Response
+object, either directly or through a promise.
 
 To add a new handle to the end of the pipeline:
 
 ```js
-browser.resources.addHandler(function(request, next) {
+browser.pipeline.addHandler(function(browser, request) {
   // Let's delay this request by 1/10th second
-  setTimeout(function() {
-    Resources.httpRequest(request, next);
-  }, Math.random() * 100);
+  return new Promise(function(resolve) {
+    setTimeout(resolve, 100);
+  });
 });
 ```
 
-If you need anything more complicated, you can access the pipeline directly via
-`browser.resources.pipeline`.
-
-You can add handlers to all browsers via `Browser.Resources.addHandler`.  These
-handlers are automatically added to every new `browser.resources` instance.
+You can add handlers to all browsers via `Pipeline.addHandler`.  These
+handlers are automatically added to every new `browser.pipeline` instance.
 
 ```js
-Browser.Resources.addHandler(function(request, response, next) {
+Pipeline.addHandler(function(browser, request, response) {
   // Log the response body
   console.log('Response body: ' + response.body);
-  next();
 });
 ```
-
-When handlers are executed, `this` is set to the browser instance.
-
-
-### Operating On Resources
-
-If you need to retrieve or operate on resources directly, you can do that as
-well, using all the same features available to Zombie, including mocks, cookies,
-authentication, etc.
-
-#### resources.addHandler(handler)
-
-Adds a handler to the pipeline of this browser instance.  To add a handler to the
-pipeline of every browser instance, use `Browser.Resources.addHandler`.
-
-#### resources.delay(url, delay)
-
-Retrieve the resource with the given URL, but only after a delay.
-
-#### resources.dump(output)
-
-Dumps the resources list to the output stream (defaults to standard output
-stream). 
-
-#### resources.fail(url, error)
-
-Do not attempt to retrieve the resource with the given URL, but act as if the
-request failed with the given message.
-
-This is used to simulate network failures (can't resolve hostname, can't make
-connection, etc).  To simulate server failures (status codes 5xx), use
-`resources.mock`.
-
-#### resources.pipeline
-
-Returns the current pipeline (array of handlers) for this browser instance.
-
-#### resources.get(url, callback)
-
-Retrieves a resource with the given URL and passes response to the callback.
-
-For example:
-
-```js
-browser.resources.get('http://some.service', function(error, response) {
-  console.log(response.statusText);
-  console.log(response.body);
-});
-```
-
-#### resources.mock(url, response)
-
-Do not attempt to retrieve the resource with the given URL, but return the
-response object instead.
-
-#### resources.post(url, options, callback)
-
-Posts a document to the resource with the given URL and passes the response to
-the callback.
-
-Supported options are:
-
-- `body`- Request document body
-- `headers` - Headers to include in the request
-- `params` - Parameters to pass in the document body
-- `timeout` - Request timeout in milliseconds (0 or `null` for no timeout)
-
-For example:
-
-```js
-var params  = { 'count': 5 };
-browser.resources.post('http://some.service',
-                       { params: params },
-                       function(error, response) {
-  . . .
-});
-
-var headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-browser.resources.post('http://some.service',
-                       { headers: headers, body: 'count=5' },
-                       function(error, response) {
-   . . .
-});
-```
-
-
-#### resources.request(method, url, options, callback)
-
-Makes an HTTP request to the resource and passes the response to the callback.
-
-Supported options are:
-
-- `body`- Request document body
-- `headers` - Headers to include in the request
-- `params` - Parameters to pass in the query string (`GET`, `DELETE`) or
-  document body (`POST`, `PUT`)
-- `timeout` - Request timeout in milliseconds (0 or `null` for no timeout)
-
-For example:
-
-```js
-browser.resources.request('DELETE',
-                          'http://some.service',
-                          function(error) {
-  . . .
-});
-```
-
-#### resources.restore(url)
-
-Reset any special resource handling from a previous call to `delay`, `fail` or
-`mock`.
-
-
-### DNS masking
-
-You can use DNS masking to test your application with real domain names.  For
-example:
-
-```
-Browser.dns.localhost('*.example.com');
-Browser.defaults.site = 'http://example.com:3000';
-
-browser = Browser.create();
-browser.visit('/here', function(error, browser) {
-  browser.assert.url('http://example.com:3000/here');
-});
-```
-
-The DNS masking offered by Zombie only works within the local Node process, and
-will not interfere or affect any other application you run.
-
-Use `Browser.dns.map(domain, type, ip)` to map a domain name, and a particular
-record type (e.g. A, CNAME even MX) to the given IP address.  For example:
-
-```
-Browser.dns.map('*.example.com', 'A', '127.0.0.1');    // IPv4
-Browser.dns.map('*.example.com', 'AAAA', '::1');       // IPv6
-Browser.dns.map('*.example.com', 'CNAME', 'localhost');
-```
-
-Since these are the most common mapping, you can call `map` with two arguments
-and Zombie will infer if the second argumet is an IPv4 address, IPv6 address or
-CNAME.
-
-Of for short, just map the A and AAAA records like this:
-
-```
-Browser.dns.localhost('*.example.com') // IPv4 and IPv6
-```
-
-If you use an asertisk, it will map the domain itself and all sub-domains,
-including `www.example.com`, `assets.example.com` and `example.com`.  Don't use
-an asterisk if you only want to map the specific domain.
-
-For MX records:
-
-```
-Browser.dns.map('example.com', 'MX', { exchange: 'localhost', priority: 10 });
-```
-
-
-### Port Mapping
-
-Your test server is most likely not running on a privileged port, but you can
-tell Zombie to map port 80 to the test server's port for a given domain.
-
-For example, if your test server is running on port 3000, you can tell Zombie to
-map port 80 to port 3000:
-
-```
-Browser.ports.map('localhost', 3000);
-```
-
-If you're testing sub-domains, you can also apply the mapping to all sub-domains
-with an asterisk, for example:
-
-```
-Browser.ports.map('*.example.com', 3000);
-```
-
-
-
-
-
-## Debugging
-
-To see what your code is doing, you can use `console.log` and friends from both
-client-side scripts and your test code.
-
-If you want to disable console output from scripts, set `browser.silent = true`
-or once for all browser instances with `Browser.default.silent = true`.
-
-For more details about what Zombie is doing (windows opened, requests made,
-event loop, etc), run with the environment variable `DEBUG=zombie`.  Zombie uses
-the [debug](https://github.com/visionmedia/debug) module, so if your code also
-uses it, you can selectively control which modules should output debug
-information.
-
-Some objects, like the browser, history, resources, tabs and windows also
-include `dump` method that will dump the current state to the console.
-
-
-
-
-## FAQ
-
-**Q:** *How do I get Zombie working with http://google.com (or any other public
-web site)?*
-
-**A:** Zombie is intended for **functional testing of Web applications**.
-
-Zombie is not intended for scraping web sites.  You can use Zombie however you
-want to, just be advised it might not work and will never get fixed.
-
-
-**Q:** *How do I report a bug?*
-
-**A:** [Open an issue on Github](https://github.com/assaf/zombie/issues).  But
-first, read the answer to the next question.
-
-
-**Q:** *How do I get someone to look at my bug?*
-
-**A:** By **isolating, testing and pull requesting**:
-
-1.  Isolate to the minimum HTML/JS/etc that's necessary to prove the bug.
-    That means code that works directly with the DOM.  No one else is going to
-    do the work of isolating the test case from thousands of lines of
-    Angular/Backbone/jQuery/etc.
-2.  Write a test case that will go green when that bug is fixed.
-    The [Zombie test suite](https://github.com/assaf/zombie/tree/master/test)
-    has over 680 test cases, you can easily find one to copy and adapt.
-3.  Submit a pull request with the test case, and if you have any, the suggested
-    solution.
-
-
-**Q:** *I found a bug in Zombie, here's a stack trace line showing where
-Contextify/JSDOM/CSSOM/htmlparser/whatever is crashing.*
-
-**A:** You found a bug that happens when you call some method on Zombie.
-There's a chance it's a bug in Zombie, and there's a chance it's an issue with
-one of the many dependencies, as shows in the stack trace.
-
-If you're looking for the quickest solution, try to find the responsible
-component and report the issue there.  The developers of
-Contextify/JSDOM/CSSOM/htmlparser/whatever are not monitoring the Zombie issues
-list.
-
-
-**Q:** *But how can I find what component is repsonsible for that bug?*
-
-**A:** There is no Zombie developer team with privileged access.
-
-The [full source code](https://github.com/assaf/zombie) for Zombie is available
-here.  The dependencies are [listed
-here](https://github.com/assaf/zombie/blob/master/package.json).  Everything,
-even the Node and V8 runtimes are open source.
-
-
-**Q:** *Zombie not working for me, can you fix it?*
-
-**A:** Zombie is an open source project.  It's free as in "do whatever you want
-with it!"
-
-Zombie is not free as in "open bar".  You get as much out of it as you put into
-it, plus everyone else's contributions.
 

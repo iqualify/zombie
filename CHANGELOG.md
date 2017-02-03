@@ -1,3 +1,257 @@
+## Version 5.0.5 2016-11-22
+
+CHANGED Support aborting XMLHttpRequests in the DONE state
+
+  731 passing (22s)
+  12 pending
+
+
+## Version 5.0.4 2016-11-09
+
+CHANGED Honor timeout in refresh meta tag.
+
+  727 passing (17s)
+  12 pending
+
+
+## Version 5.0.3 2016-11-09
+
+CHANGED button() to find input elements with type 'reset' and 'button' in
+addition to 'submit'
+
+  727 passing (17s)
+  12 pending
+
+
+## Version 5.0.2 2016-11-08
+
+ADDED implementations of offsetWidth, offsetHeight and fixed getClientRects
+so that jquery will detect reliableHiddenOffsets as true
+
+  726 passing (17s)
+  12 pending
+
+
+## Version 5.0.1 2016-11-04
+
+ADDED stub implementation of HTMLElement.getClientRects() to support jquery 1.12 implementation of width()
+
+701 passing (16s)
+  12 pending
+
+
+## Version 5.0.0 2016-11-03
+
+Bumping the major version because jsdom is such a core component to zombie
+that major updates to it have the impact to show as breaking changes to
+zombie users.
+
+UPDATED jsdom to ^7
+
+701 passing (16s)
+  12 pending
+
+
+## Version 4.3.0 2016-10-24
+
+ADDED support for node v6
+
+CHANGED updated to use ws 1.x
+
+701 passing (14s)
+  12 pending
+
+
+## Version 4.2.1 2015-10-28
+
+FIXED missing lib directory
+
+697 passing (27s)
+  12 pending
+
+
+## Version 4.2.0 2015-10-28
+
+CHANGED updated to use Bluebird 3.x
+
+697 passing (23s)
+  12 pending
+
+
+## Version 4.1.0 2015-08-21
+
+FIXED using properties instead of attributes whenever possible
+
+FIXED storage should use Map instead of object literal
+
+697 passing (23s)
+  12 pending
+
+
+## Version 4.0.13 2015-06-25
+
+FIXED Multipart submission breaks for simple values
+
+697 passing (24s)
+  12 pending
+
+
+## Version 4.0.12 2015-06-23
+
+Work around some Babel.js bugs.
+
+697 passing (24s)
+  12 pending
+
+
+## Version 4.0.11 2015-06-12
+
+Upgraded to JSDOM 5.3.0.
+
+ 697 passing (24s)
+  12 pending
+
+
+## Version 4.0.10 2015-04-29
+
+Upgraded to JSDOM 5.2.0 and tough-cookie 1.1.0
+
+ 694 passing (22s)
+  12 pending
+
+
+## Version 4.0.9 2015-04-25
+
+Upgraded to JSDOM 5.1.0
+
+FIXED assertion errors not propagating out of wait callback
+
+ 694 passing (22s)
+  12 pending
+
+
+## Version 4.0.8 2015-04-19
+
+Upgraded to JSDOM 5.0.1
+
+ADDED expose Browser.Request/Response/Headers
+
+CHANGED use regexp instead of startsWith
+
+ 694 passing (22s)
+  12 pending
+
+
+## Version 4.0.7 2015-04-10
+
+Version 4.0 requires io.js, see:
+https://github.com/tmpvar/jsdom/blob/master/Changelog.md#400
+
+ADDED preliminary support for the Fetch API (https://fetch.spec.whatwg.org/)
+
+ADDED you can use the `browser.fetch` to retrieve any resources, using the
+cookies, pipeline and all other browser settings
+
+CHANGED upgraded to JSDOM 4.1
+
+CHANGED use `browser.status` instead of `browser.statusCode` (HTML APIs use
+`status` and `statusText`)
+
+CHANGED `browser.resources` is now just an array of all resources requested when
+processing the currently open window.  Resources no longer shared by all
+windows, and other features (pipeline configuration, fetch resources) moved
+elsewhere.
+
+CHANGED separated pipeline from resources.  Use `browser.pipeline.addHandler` to
+add request/response handler to the browser instance, or `Pipeline.addHandler`
+to add handler to all new instances.
+
+CHANGED pipeline API changed as well.  Request handler called with browser
+instance and Fetch `Request` object, can return null or a Fetch `Response`
+object.  Response handler called with browser instance, request and response
+object, should return same or new response object.  Handlers no longer using
+callbacks, if you need asynchronous behavior, return a promise.
+
+FIXED empty `cookie` and `referer` header no longer sent #881
+
+FIXED added `navigator.appVersion` #885
+
+REMOVED `document.window`, use `document.defaultView` instead
+
+REMOVED `browser.close` confusing method name, use `browser.window.close` if you
+really need to close the window.
+
+ 694 passing (21s)
+  12 pending
+
+
+## Version 3.1.1 2015-03-26
+
+FIXED file URLs not resolving correctly #886 (Jeffrey Jagoda)
+
+
+## Version 3.1.0 2015-03-15
+
+3.1 is the first official release of Zombie 3.x.  It is a major upgrade from
+2.5, and as such has several breaking changes.  Please check the list of changes
+below to learn what has changed.
+
+ADDED DOM URL class
+
+ADDED XHR events emitted to browser
+
+ADDED wait() ends with error if Browser cannot load all resources on the page
+(e.g. doesn't get to load scripts)
+
+ADDED submitting form using an image input will include coordinates #865 (Werner
+Beroux)
+
+REMOVED browser.fork no longer supported
+
+REMOVED browser.htmlParser option no longer supported, always using default
+browser (parser5)
+
+REMOVED Browser.visit(url, options) no longer changes instance options
+
+REMOVED resources.mock/fail/delay, use Nock instead
+
+REMOVED protocol and bcat, no tests
+
+REMOVED Browser.create
+
+REMOVED Browser.dns and Browser.ports, switching to different implementation
+
+CHANGED Browser.debug -> browser.debug (per instance)
+
+CHANGED browser.referer -> browser.referrer
+
+CHANGED Browser.default.<name> = <value> deprecated, use Browser.<name> = <value> instead
+
+CHANGED timeout event -> setTimeout, interval -> setInterval
+
+CHANGED removed onalert/onconfirm/onprompt, use browser.on('alert', fn) etc
+
+CHANGED credentials replaced with browser.on('authenticate', fn)
+
+CHANGED browser.wait() runs event loop so you can catch done/error events
+
+CHANGED event loop `done` event renamed to `idle`
+
+CHANGED upgraded to JSDOM 3.1, added io.js and Node 0.12 support
+
+CHANGED all dump() methods now accept output stream or output to stdout
+
+CHANGED XHR errors no longer stop the event loop
+
+If you are wondering what happened to 3.0, there were 16 test relases of 3.0
+leading up to 3.1.  Test releases are tagged as `next` instead of `latest`.  NPM
+defaults to showing and installing `latest versions, you have to explicitly
+instruct it to `install` next versions.
+
+ 688 passing (22s)
+  12 pending
+
+
 ## Version 2.5.1 2014-12-08
 
 ADDED `waitForServer` to wait for a server-initiated event before running
