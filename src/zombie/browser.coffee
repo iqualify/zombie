@@ -821,9 +821,9 @@ class Browser extends EventEmitter
   # Returns this.
   selectOption: (selector)->
     option = @query(selector)
-    if option && !option.getAttribute("selected")
+    if option && !option.selected
       select = @xpath("./ancestor::select", option).iterateNext()
-      option.setAttribute("selected", "selected")
+      option.selected = true
       select.focus()
       @fire(select, "change", false)
     return this
