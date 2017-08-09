@@ -215,6 +215,7 @@ resourceLoader.load = function(element, href, callback) {
 const jsdomResolveHref = Utils.resolveHref;
 Utils.resolveHref = function (baseUrl, href) {
   const pattern = /file:?/;
+  baseUrl = baseUrl.protocol ? baseUrl.protocol+'//'+baseUrl.host : baseUrl;
   const protocol = URL.parse(baseUrl).protocol;
   const original = URL.parse(href);
   const resolved = URL.parse(jsdomResolveHref(baseUrl, href));
